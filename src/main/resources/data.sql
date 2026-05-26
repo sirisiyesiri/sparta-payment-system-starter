@@ -1,3 +1,6 @@
+-- 회원 데이터 (비밀번호: "sparta1234" → BCrypt 해시)
+INSERT INTO members (name, email, password_hash, phone_number, created_at, updated_at) VALUES ('르탄이', 'sparta@nbcamp.com', '$2b$10$GPazGXUOf.Ek2M3YYbt4GuGluvmUlm9.dA6M7MVQca4CQ0/iufLP.', '010-1234-5678', NOW(), NOW());
+
 -- 상품 데이터
 INSERT INTO products (name, price, stock, description, created_at, updated_at) VALUES
                                                                                    ('코튼 트윌 볼캡', 5000, 200, '데일리 필수템 코튼 트윌 볼캡. 가볍고 편안한 착용감으로 어떤 코디에도 포인트.', NOW(), NOW()),
