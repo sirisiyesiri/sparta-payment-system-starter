@@ -1,0 +1,14 @@
+### 로그인 (토큰 발급)
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "sparta@nbcamp.com",
+  "password": "sparta1234"
+}
+
+> {% client.global.set("authToken", response.body.data.token); %}
+
+### TC-2. 장바구니 비어 있을 때 주문서 조회 → 기대: 400 Bad Request + {"code":"CART_001","message":"장바구니가 비어있습니다."}
+GET http://localhost:8080/api/orders/checkout
+Authorization: Bearer {{authToken}}
