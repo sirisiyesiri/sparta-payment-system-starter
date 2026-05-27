@@ -3,6 +3,8 @@ package com.sparta.paymentsystem.domain.cart.entity;
 import com.sparta.paymentsystem.domain.member.entity.Member;
 import com.sparta.paymentsystem.domain.product.entity.Product;
 import com.sparta.paymentsystem.global.entity.BaseTimeEntity;
+import com.sparta.paymentsystem.global.error.BusinessException;
+import com.sparta.paymentsystem.global.error.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -34,9 +36,7 @@ public class CartItem extends BaseTimeEntity {
     public CartItem(Member member, Product product, int quantity) {
         this.member = member;
         this.product = product;
-        if (quantity < 1) {
-            throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
-        }
+        validateQuantity(quantity);
         this.quantity = quantity;
     }
 
@@ -49,16 +49,18 @@ public class CartItem extends BaseTimeEntity {
     }
 
     public void addQuantity(int quantity) {
-        if (quantity < 1) {
-            throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
-        }
+        validateQuantity(quantity);
         this.quantity += quantity;
     }
 
     public void changeQuantity(int quantity) {
-        if (quantity < 1) {
-            throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
-        }
+        validateQuantity(quantity);
         this.quantity = quantity;
+    }
+
+    private void validateQuantity(int quantity) {
+        if(quantity < 1) {
+            throw new BusinessException(ErrorCode.INVALID_QUANTITY);
+        }
     }
 }

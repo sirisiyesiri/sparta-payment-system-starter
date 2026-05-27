@@ -3,6 +3,8 @@ package com.sparta.paymentsystem.domain.member.service;
 import com.sparta.paymentsystem.domain.member.entity.Member;
 import com.sparta.paymentsystem.domain.member.dto.MemberResponse;
 import com.sparta.paymentsystem.domain.member.repository.MemberRepository;
+import com.sparta.paymentsystem.global.error.BusinessException;
+import com.sparta.paymentsystem.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +29,6 @@ public class MemberService {
 
     public Member findById(Long memberId) {
         return memberRepository.findById(memberId)
-                .orElseThrow(() -> new RuntimeException("회원을 찾을 수 없습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
     }
 }

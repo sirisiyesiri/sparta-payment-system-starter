@@ -6,6 +6,7 @@ import com.sparta.paymentsystem.domain.cart.dto.CartItemResponse;
 import com.sparta.paymentsystem.domain.cart.dto.UpdateCartRequest;
 import com.sparta.paymentsystem.domain.cart.facade.CartFacade;
 import com.sparta.paymentsystem.domain.cart.service.CartService;
+import com.sparta.paymentsystem.global.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -23,29 +24,33 @@ public class CartController {
     private final CartService cartService;
 
     @GetMapping("/items")
-    public ResponseEntity<List<CartItemResponse>> getItems(@AuthenticationPrincipal Long memberId) {
-        return ResponseEntity.ok(cartService.getCartItems(memberId));
+    public ResponseEntity<ApiResponse<List<CartItemResponse>>> getItems(@AuthenticationPrincipal Long memberId) {
+        return ResponseEntity.ok(
+                ApiResponse.ok(cartService.getCartItems(memberId))
+        );
     }
 
     @PostMapping("/items")
-    public ResponseEntity<AddCartResponse> addItem(@AuthenticationPrincipal Long memberId,
+    public ResponseEntity<ApiResponse<AddCartResponse>> addItem(@AuthenticationPrincipal Long memberId,
                                                    @Valid @RequestBody AddCartRequest request) {
         Long cartItemId = cartFacade.addItem(memberId, request);
-        return ResponseEntity.ok(new AddCartResponse(cartItemId));
+        return ResponseEntity.ok(
+                ApiResponse.ok(new AddCartResponse(cartItemId))
+        );
     }
 
     @PatchMapping("/items/{id}")
-    public ResponseEntity<Void> updateQuantity(@AuthenticationPrincipal Long memberId,
+    public ResponseEntity<ApiResponse<Void>> updateQuantity(@AuthenticationPrincipal Long memberId,
                                                @PathVariable Long id,
                                                @Valid @RequestBody UpdateCartRequest request) {
         cartService.updateQuantity(memberId, id, request.quantity());
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(ApiResponse.ok());
     }
 
     @DeleteMapping("/items/{itemId}")
-    public ResponseEntity<Void> removeItem(@AuthenticationPrincipal Long memberId,
+    public ResponseEntity<ApiResponse<Void>> removeItem(@AuthenticationPrincipal Long memberId,
                                            @PathVariable Long itemId) {
         cartService.removeItem(memberId, itemId);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(ApiResponse.ok());
     }
 }
