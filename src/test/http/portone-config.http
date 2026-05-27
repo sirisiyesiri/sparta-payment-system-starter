@@ -1,0 +1,19 @@
+### TC-1. PortOne 설정 조회 API
+# 기대: 200 OK + storeId, channelKey 반환
+# 검증: apiSecret이 응답에 포함되지 않음
+GET http://localhost:8080/api/config/portone
+
+> {%
+    client.test("응답 코드 200", function () {
+        client.assert(response.status === 200, "Expected 200 OK");
+    });
+    client.test("storeId 존재", function () {
+        client.assert(response.body.data.storeId != null, "storeId should not be null");
+    });
+    client.test("channelKey 존재", function () {
+        client.assert(response.body.data.channelKey != null, "channelKey should not be null");
+    });
+    client.test("apiSecret 미포함", function () {
+        client.assert(response.body.data.apiSecret === undefined, "apiSecret should not be exposed");
+    });
+%}
