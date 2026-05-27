@@ -1,5 +1,6 @@
 package com.sparta.paymentsystem.domain.member.controller;
 
+import com.sparta.paymentsystem.global.response.ApiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.sparta.paymentsystem.domain.member.dto.MemberResponse;
@@ -15,7 +16,9 @@ public class MemberController {
     private final MemberService memberService;
 
     @GetMapping("/me")
-    public ResponseEntity<MemberResponse> me(@AuthenticationPrincipal Long memberId) {
-        return ResponseEntity.ok(memberService.getMe(memberId));
+    public ResponseEntity<ApiResponse<MemberResponse>> me(@AuthenticationPrincipal Long memberId) {
+        return ResponseEntity.ok(
+                ApiResponse.ok(memberService.getMe(memberId))
+        );
     }
 }

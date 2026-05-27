@@ -1,5 +1,7 @@
 package com.sparta.paymentsystem.domain.auth.service;
 
+import com.sparta.paymentsystem.global.error.BusinessException;
+import com.sparta.paymentsystem.global.error.ErrorCode;
 import com.sparta.paymentsystem.global.jwt.JwtProvider;
 import com.sparta.paymentsystem.domain.member.entity.Member;
 import com.sparta.paymentsystem.domain.auth.dto.AuthResponse;
@@ -23,7 +25,7 @@ public class AuthService {
     @Transactional
     public void signup(SignupRequest request) {
         if (memberRepository.existsByEmail(request.email())) {
-            throw new RuntimeException("이미 존재하는 이메일입니다.");
+            throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
         }
         Member member = new Member(
                 request.name(),
@@ -36,10 +38,10 @@ public class AuthService {
 
     public AuthResponse login(LoginRequest request) {
         Member member = memberRepository.findByEmail(request.email())
-                .orElseThrow(() -> new RuntimeException("이메일 또는 비밀번호가 올바르지 않습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS));
 
         if (!passwordEncoder.matches(request.password(), member.getPasswordHash())) {
-            throw new RuntimeException("이메일 또는 비밀번호가 올바르지 않습니다.");
+            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
         }
         String token = jwtProvider.createToken(member.getId(), member.getEmail());
         return new AuthResponse(token, toMemberInfo(member));
