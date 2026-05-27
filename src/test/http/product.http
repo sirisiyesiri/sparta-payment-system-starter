@@ -1,0 +1,5 @@
+### TC-1. 존재하지 않는 상품 조회 → 기대: 404 Not Found + {"code":"PRODUCT_001","message":"상품을 찾을 수 없습니다."}
+GET http://localhost:8080/api/products/999
+
+### TC-2. 잘못된 요청 형식 → 기대: 400 Bad Request + 공통 에러 형식
+GET http://localhost:8080/api/products/abc
