@@ -7,7 +7,7 @@ Content-Type: application/json
   "password": "sparta1234"
 }
 
-> {% client.global.set("authToken", response.body.token); %}
+> {% client.global.set("authToken", response.body.data.token); %}
 
 ### TC-6. 수량 변경 (잘못된 값) — 기대: 400 Bad Request
 PATCH http://localhost:8080/api/cart/items/1
