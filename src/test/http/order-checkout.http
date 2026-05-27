@@ -1,0 +1,167 @@
+### 사전 준비: 로그인 (토큰 발급)
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "sparta@nbcamp.com",
+  "password": "sparta1234"
+}
+
+> {%
+    client.global.set("token", response.body.data.token);
+%}
+
+###
+
+### 사전 준비: 장바구니에 상품 담기
+POST http://localhost:8080/api/cart/items
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "productId": 1,
+  "quantity": 1
+}
+
+###
+
+### TC-1. 주문+결제 동시 생성 (정상)
+# 기대: 201 Created + orderId, portonePaymentId, totalPrice, orderName, status 반환
+# 검증: 재고 차감 확인, 장바구니 비워짐 확인
+POST http://localhost:8080/api/orders/checkout
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "cartItemIds": [1]
+}
+
+> {%
+    client.test("응답 코드 201", function () {
+        client.assert(response.status === 201, "Expected 201 Created");
+    });
+    client.test("orderId 존재", function () {
+        client.assert(response.body.data.orderId != null, "orderId should not be null");
+    });
+    client.test("portonePaymentId 존재", function () {
+        client.assert(response.body.data.portonePaymentId != null, "portonePaymentId should not be null");
+    });
+    client.test("totalPrice 존재", function () {
+        client.assert(response.body.data.totalPrice > 0, "totalPrice should be greater than 0");
+    });
+    client.test("orderName 존재", function () {
+        client.assert(response.body.data.orderName != null, "orderName should not be null");
+    });
+    client.test("status 존재", function () {
+        client.assert(response.body.data.status != null, "status should not be null");
+    });
+%}
+
+###
+
+### TC-1 검증: 장바구니 비워짐 확인
+GET http://localhost:8080/api/cart/items
+Authorization: Bearer {{token}}
+
+> {%
+    client.test("장바구니 비어있음", function () {
+        client.assert(response.body.data.length === 0, "Cart should be empty after checkout");
+    });
+%}
+
+###
+
+### TC-2. 장바구니가 비어 있을 때
+# 기대: 400 Bad Request + 에러 응답
+POST http://localhost:8080/api/orders/checkout
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "cartItemIds": []
+}
+
+> {%
+    client.test("응답 코드 400", function () {
+        client.assert(response.status === 400, "Expected 400 Bad Request");
+    });
+%}
+
+###
+
+### TC-3 사전 준비: 재고 부족 테스트용 장바구니 담기 (재고보다 많은 수량)
+POST http://localhost:8080/api/cart/items
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "productId": 1,
+  "quantity": 99999
+}
+
+###
+
+### TC-3. 재고 부족
+# 기대: 409 Conflict + 에러 응답, 재고 원복 확인
+POST http://localhost:8080/api/orders/checkout
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "cartItemIds": [2]
+}
+
+> {%
+    client.test("응답 코드 409", function () {
+        client.assert(response.status === 409, "Expected 409 Conflict");
+    });
+%}
+
+###
+
+### TC-4. 주문 목록 조회
+# 기대: 200 OK + 주문 배열 (최신순 정렬)
+GET http://localhost:8080/api/orders
+Authorization: Bearer {{token}}
+
+> {%
+    client.test("응답 코드 200", function () {
+        client.assert(response.status === 200, "Expected 200 OK");
+    });
+    client.test("주문 목록이 배열", function () {
+        client.assert(Array.isArray(response.body.data), "data should be an array");
+    });
+%}
+
+###
+
+### TC-5. 주문 상세 조회 (정상)
+# 기대: 200 OK + 주문 상세 (items 포함)
+GET http://localhost:8080/api/orders/1
+Authorization: Bearer {{token}}
+
+> {%
+    client.test("응답 코드 200", function () {
+        client.assert(response.status === 200, "Expected 200 OK");
+    });
+    client.test("orderId 일치", function () {
+        client.assert(response.body.data.orderId === 1, "orderId should be 1");
+    });
+    client.test("items 존재", function () {
+        client.assert(response.body.data.orderItems != null, "orderItems should not be null");
+        client.assert(response.body.data.orderItems.length > 0, "orderItems should not be empty");
+    });
+%}
+
+###
+
+### TC-6. 주문 상세 조회 (존재하지 않는 ID)
+# 기대: 404 Not Found + 에러 응답
+GET http://localhost:8080/api/orders/999
+Authorization: Bearer {{token}}
+
+> {%
+    client.test("응답 코드 404", function () {
+        client.assert(response.status === 404, "Expected 404 Not Found");
+    });
+%}
