@@ -4,6 +4,7 @@ import com.sparta.paymentsystem.domain.order.entity.Order;
 import com.sparta.paymentsystem.domain.order.entity.OrderItem;
 
 import com.sparta.paymentsystem.domain.order.service.OrderService;
+import com.sparta.paymentsystem.domain.payment.dto.PaymentCancelResponse;
 import com.sparta.paymentsystem.domain.payment.dto.PaymentConfirmResponse;
 import com.sparta.paymentsystem.domain.payment.entity.Payment;
 import com.sparta.paymentsystem.domain.product.entity.Product;
@@ -11,6 +12,8 @@ import com.sparta.paymentsystem.domain.product.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 /**
  * 결제 승인/실패 시 여러 도메인(결제, 주문, 상품)을 한 트랜잭션으로 묶어 처리하는 서비스
@@ -28,6 +31,7 @@ public class PaymentCommandService {
     private final PaymentService paymentService;
     private final OrderService orderService;
     private final ProductService productService;
+    private final RefundService refundService;
 
     /**
      * 결제 실패 처리
@@ -96,4 +100,40 @@ public class PaymentCommandService {
         }
     }
 
+    /**
+     * 결제 전액 취소 처리
+     *
+     * 흐름:
+     *   1) paymentId 로 결제 + 주문을 함께 조회 (fetch join)
+     *   2) 결제 상태 → CANCELED
+     *   3) 주문 상태 → CANCELED
+     *   4) 주문 상품들의 재고 복구
+     *   5) 환불 이력(Refund) 생성 — 언제, 왜, 얼마를 돌려줬는지 기록
+     *   6) 클라이언트에 내려줄 응답 DTO 반환
+     *
+     * 취소는 단순히 상태만 바꾸는 게 아니라 "환불 이력"을 남겨야 한다.
+     * 고객 CS 대응, 정산, 분쟁 대응을 위해 누가/언제/왜 취소했는지 추적 가능해야 하기 때문이다.
+     * 이 모든 단계는 @Transactional 로 묶여 하나라도 실패하면 전부 롤백된다.
+     *
+     */
+    @Transactional
+    public PaymentCancelResponse cancelPaymentAndOrder(Long paymentId, String cancelReason) {
+        Payment payment = paymentService.findByIdWithOrder(paymentId);
+        Order order = payment.getOrder();
+
+        paymentService.cancelPayment(payment);
+        orderService.cancelOrder(order);
+        restoreStock(order);
+
+        refundService.createRefund(payment, cancelReason, LocalDateTime.now());
+
+        return new PaymentCancelResponse(
+                paymentId,
+                order.getId(),
+                payment.getPortonePaymentId(),
+                payment.getStatus().name(),
+                order.getStatus().name(),
+                "결제가 취소되었습니다"
+        );
+    }
 }
