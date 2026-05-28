@@ -49,5 +49,8 @@ public class OrderItem extends BaseTimeEntity {
         return orderPrice * quantity;
     }
 
+    public Long getProductId() {
+        return this.product.getId();
+    }
 }
 

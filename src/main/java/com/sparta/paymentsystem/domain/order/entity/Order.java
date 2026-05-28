@@ -2,6 +2,8 @@ package com.sparta.paymentsystem.domain.order.entity;
 
 import com.sparta.paymentsystem.domain.member.entity.Member;
 import com.sparta.paymentsystem.global.entity.BaseTimeEntity;
+import com.sparta.paymentsystem.global.error.BusinessException;
+import com.sparta.paymentsystem.global.error.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -56,5 +58,20 @@ public class Order extends BaseTimeEntity {
         return firstName + " 외 " + (orderItems.size() - 1) + "건";
     }
 
+    public void markAsConfirmed() {
+        changeStatus(OrderStatus.CONFIRMED);
+    }
+
+    public void markAsCancelled() {
+        changeStatus(OrderStatus.CANCELLED);
+    }
+
+    // 주문 상태 변경 로직
+    private void changeStatus(OrderStatus newStatus) {
+        if (!this.status.canTransitTo(newStatus)) {
+            throw new BusinessException(ErrorCode.INVALID_ORDER_STATUS);
+        }
+        this.status = newStatus;
+    }
 }
 
