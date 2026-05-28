@@ -23,4 +23,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     // 타입 안정성은 떨어지므로, 실무에선 인터페이스/레코드 프로젝션으로 개선 가능
     @Query("SELECT p.order.id, p.id FROM Payment p WHERE p.order.id IN :orderIds")
     List<Object[]> findIdsByOrderIds(@Param("orderIds") List<Long> orderIds);
+
+    // 주문 단건 상세 조회 : orderId만으로 조회
+    @Query("SELECT p FROM Payment p JOIN FETCH p.order WHERE p.order.id = :orderId")
+    Optional<Payment> findByOrderIdWithOrder(@Param("orderId") Long orderId);
 }
