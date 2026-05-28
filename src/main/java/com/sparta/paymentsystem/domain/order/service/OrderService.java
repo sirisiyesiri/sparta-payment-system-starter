@@ -55,4 +55,15 @@ public class OrderService {
         );
     }
 
+    // 주문 상태 변경 (CONFIRMED)
+    @Transactional
+    public void confirmOrder(Order order) {
+        order.markAsConfirmed();
+    }
+
+    // 주문 상태 변경 (CANCELLED)
+    @Transactional
+    public void cancelOrder(Order order) {
+        order.markAsCancelled();
+    }
 }
