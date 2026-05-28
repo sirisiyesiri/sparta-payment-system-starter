@@ -2,6 +2,8 @@ package com.sparta.paymentsystem.domain.payment.entity;
 
 import com.sparta.paymentsystem.domain.order.entity.Order;
 import com.sparta.paymentsystem.global.entity.BaseTimeEntity;
+import com.sparta.paymentsystem.global.error.BusinessException;
+import com.sparta.paymentsystem.global.error.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -45,6 +47,23 @@ public class Payment extends BaseTimeEntity {
 
     private static String generatePortonePaymentId() {
         return "pay_" + UUID.randomUUID();
+    }
+
+    public void markAsPaid() {
+        changeStatus(PaymentStatus.PAID);
+        this.paidAt = LocalDateTime.now();
+    }
+
+    public void markAsFailed() {
+        changeStatus(PaymentStatus.FAILED);
+    }
+
+    // 결제 상태 변경 로직
+    private void changeStatus(PaymentStatus newStatus) {
+        if (!this.status.canTransitTo(newStatus)) {
+            throw new BusinessException(ErrorCode.INVALID_PAYMENT_STATUS);
+        }
+        this.status = newStatus;
     }
 
 }
