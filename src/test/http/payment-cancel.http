@@ -1,0 +1,110 @@
+### 사전 준비: 로그인 (토큰 발급)
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "sparta@nbcamp.com",
+  "password": "sparta1234"
+}
+
+> {%
+    client.global.set("token", response.body.data.token);
+%}
+
+###
+
+### 사전 준비: 취소 전 상품 재고 확인
+GET http://localhost:8080/api/products/1
+Authorization: Bearer {{token}}
+
+> {%
+    client.global.set("stockBefore", response.body.data.stock);
+    client.log("취소 전 재고: " + response.body.data.stock);
+%}
+
+###
+
+### TC-1. 결제 취소 정상 처리
+# 사전 조건: paymentId=1이 PAID 상태여야 함 (order-checkout → payment-confirm 완료 후 실행)
+# 기대: 200 OK + paymentStatus: CANCELLED, orderStatus: CANCELLED, message 반환
+POST http://localhost:8080/api/payments/1/cancel
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "reason": "단순 변심"
+}
+
+> {%
+    client.test("응답 코드 200", function () {
+        client.assert(response.status === 200, "Expected 200 OK");
+    });
+    client.test("paymentStatus CANCELLED", function () {
+        client.assert(response.body.data.paymentStatus === "CANCELLED", "paymentStatus should be CANCELLED");
+    });
+    client.test("orderStatus CANCELLED", function () {
+        client.assert(response.body.data.orderStatus === "CANCELLED", "orderStatus should be CANCELLED");
+    });
+    client.test("orderId 존재", function () {
+        client.assert(response.body.data.orderId != null, "orderId should not be null");
+    });
+    client.test("message 존재", function () {
+        client.assert(response.body.data.message != null, "message should not be null");
+    });
+%}
+
+###
+
+### TC-2. 중복 취소 시도
+# TC-1 이후 동일 요청 재전송
+# 기대: 400 Bad Request (PAID가 아니므로 상태 선검증에서 거부)
+POST http://localhost:8080/api/payments/1/cancel
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "reason": "단순 변심"
+}
+
+> {%
+    client.test("응답 코드 400", function () {
+        client.assert(response.status === 400, "Expected 400 Bad Request");
+    });
+%}
+
+###
+
+### TC-3. 존재하지 않는 결제 취소
+# 기대: 404 Not Found
+POST http://localhost:8080/api/payments/999/cancel
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "reason": "테스트"
+}
+
+> {%
+    client.test("응답 코드 404", function () {
+        client.assert(response.status === 404, "Expected 404 Not Found");
+    });
+%}
+
+###
+
+### TC-4. 재고 원복 검증
+# TC-1 이후 실행 — 취소 후 재고가 주문 수량만큼 복구되었는지 확인
+GET http://localhost:8080/api/products/1
+Authorization: Bearer {{token}}
+
+> {%
+    client.test("응답 코드 200", function () {
+        client.assert(response.status === 200, "Expected 200 OK");
+    });
+    client.test("재고 원복 확인", function () {
+        var stockAfter = response.body.data.stock;
+        var stockBefore = client.global.get("stockBefore");
+        client.log("취소 전 재고: " + stockBefore + ", 취소 후 재고: " + stockAfter);
+        client.assert(stockAfter > stockBefore, "Stock should be restored after cancellation");
+    });
+%}
