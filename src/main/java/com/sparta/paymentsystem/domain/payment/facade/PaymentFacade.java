@@ -1,6 +1,8 @@
 package com.sparta.paymentsystem.domain.payment.facade;
 
 import com.sparta.paymentsystem.domain.order.entity.Order;
+import com.sparta.paymentsystem.domain.payment.dto.PaymentCancelRequest;
+import com.sparta.paymentsystem.domain.payment.dto.PaymentCancelResponse;
 import com.sparta.paymentsystem.domain.payment.dto.PaymentConfirmRequest;
 import com.sparta.paymentsystem.domain.payment.dto.PaymentConfirmResponse;
 import com.sparta.paymentsystem.domain.payment.entity.Payment;
@@ -115,4 +117,38 @@ public class PaymentFacade {
         return paymentCommandService.approvePaymentAndOrder(order.getId());
     }
 
+    /**
+     * 결제 취소 (전액 취소)
+     *
+     * 1. 결제 조회 + 본인 검증 + 상태 선검증 (PAID)
+     * 2. [트랜잭션] DB 상태 변경 (CANCELLED) + 재고 원복 + Refund 생성
+     * 3. [외부 API] PG사 결제 취소 (DB 커밋 후, 실패 시 로그 + 수동 처리)
+     */
+    public PaymentCancelResponse cancelPayment(Long memberId, Long paymentId, PaymentCancelRequest request) {
+        String cancelReason = (request != null && request.reason() != null)
+                ? request.reason() : "사용자 요청 취소";
+
+        // 1. 결제 조회 + 본인 검증
+        Payment payment = paymentService.findByIdWithOrder(paymentId);
+        if (!payment.getOrder().getMemberId().equals(memberId)) {
+            throw new BusinessException(ErrorCode.ORDER_NOT_FOUND);
+        }
+
+        // 1-1. PAID 상태만 취소 가능 (불필요한 트랜잭션 + PG 호출 방지)
+        if (payment.getStatus() != PaymentStatus.PAID) {
+            throw new BusinessException(ErrorCode.INVALID_PAYMENT_STATUS);
+        }
+
+        // 2. 트랜잭션: DB 상태 변경 + 재고 원복 + Refund 생성
+        PaymentCancelResponse response = paymentCommandService.cancelPaymentAndOrder(paymentId, cancelReason);
+
+        // 3. 외부 API: PG사 결제 취소 (DB 커밋 후)
+        try {
+            paymentGateway.cancelPayment(response.portonePaymentId(), cancelReason);
+        } catch (Exception e) {
+            log.error("PG 결제 취소 실패 : DB는 이미 CANCELLED 커밋됨, 수동 처리 필요: portonePaymentId={}", response.portonePaymentId(), e);
+        }
+
+        return response;
+    }
 }

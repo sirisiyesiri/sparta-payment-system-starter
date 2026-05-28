@@ -62,5 +62,17 @@ public class PaymentService {
     public void failPayment(Payment payment) {
         payment.markAsFailed();
     }
+
+    // 결제 상태 변경 (CANCELLED)
+    @Transactional
+    public void cancelPayment(Payment payment) {
+        payment.markAsCancelled();
+    }
+
+    // 결제 정보와 연관된 주문 정보를 paymentId 기반으로 조회
+    public Payment findByIdWithOrder(Long paymentId) {
+        return paymentRepository.findByIdWithOrder(paymentId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
+    }
 }
 
